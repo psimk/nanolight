@@ -7,7 +7,7 @@
 #
 # Fetched as it runs, into zig-out/promo, and never kept in the repository:
 # Apple's MacBook Air AR model from apple.com (its display shows the
-# promo's frames; its baked wallpaper is the desktop), and Google's results
+# promo's frames; its baked wallpaper is the desktop), and DuckDuckGo's results
 # page for the search shown, captured in an offscreen WebKit view.
 set -eu
 cd "$(dirname "$0")/.."

@@ -83,7 +83,7 @@ const script = [_]Step{
     .{ .at = 10.7, .op = .enter },
     .{ .at = 10.7, .op = say("Copied", "↩") },
     .{ .at = 12.1, .op = .clear },
-    .{ .at = 12.4, .op = say("Google suggests as you type", "") },
+    .{ .at = 12.4, .op = say("DuckDuckGo suggests as you type", "") },
 } ++ typing(12.4, "liquid gl", 0.09) ++ [_]Step{
     .{ .at = 14.3, .op = tab },
     .{ .at = 14.3, .op = say("Tab takes the suggestion", "Tab") },
@@ -94,8 +94,7 @@ const script = [_]Step{
     .{ .at = 19.5, .op = .clear },
 } ++ typing(19.7, "best ramen", 0.065) ++ [_]Step{
     .{ .at = 20.6, .op = down },
-    .{ .at = 20.6, .op = say("Ask Grok. Search X.", "↓") },
-    .{ .at = 21.25, .op = down },
+    .{ .at = 20.6, .op = say("Search DuckDuckGo. Ask Grok.", "↓") },
     .{ .at = 22.4, .op = say("", "") },
     .{ .at = 22.6, .op = esc },
     .{ .at = end_at, .op = .end },
@@ -167,7 +166,7 @@ fn isKey(op: Op) bool {
 
 /// When sounds land, in seconds into the video: `key`, `tab`, `enter` for
 /// keys, `open` as the panel opens, `lift` as a loupe does, `page` as
-/// Google's page shows, `cross` where the laptop gives way, and `end`,
+/// DuckDuckGo's page shows, `cross` where the laptop gives way, and `end`,
 /// `name` for the end.
 fn cues(io: std.Io) !void {
     var buf: [8192]u8 = undefined;
@@ -292,7 +291,7 @@ pub fn main(init: std.process.Init) !void {
         t.frame();
         t.ctx.input.ops = &.{};
         t.ctx.input.shortcut = null;
-        sc.google();
+        sc.complete();
         if (now < first - 0.5 / @as(f32, fps)) continue;
         const pixels = try t.render(gpa);
         defer pixels.deinit(gpa);

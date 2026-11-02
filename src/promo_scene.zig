@@ -1,5 +1,5 @@
 //! What the promo's camera looks at: a desktop, dimmed, and on it the
-//! panel (the app's own `view.zig`), Google's page in it while it
+//! panel (the app's own `view.zig`), DuckDuckGo's page in it while it
 //! previews, a quiet label naming what is shown, and the end, where the
 //! panel's own rectangle becomes the icon beside the name. Labels are
 //! sized against the camera's zoom, so they read the same at every zoom.
@@ -25,8 +25,7 @@ const wall_density: f32 = 1920.0 / width;
 
 pub const Label = struct { text: []const u8, key: []const u8 = "", at: f32 };
 
-/// What Google answered for these words (suggestqueries, client=firefox,
-/// 2 November 2026), decoded as the app decodes them.
+/// Sample completions for the promo, decoded as the app decodes them.
 const answers = [_]struct { []const u8, []const u8 }{
     .{ "liquid gl", "[\"liquid gl\",[\"liquid glass\",\"liquid glue\",\"liquid glass apple\",\"liquid glass wallpaper\",\"liquid glycerol\"]]" },
     .{ "liquid glass", "[\"liquid glass\",[\"liquid glass\",\"liquid glass apple\",\"liquid glass wallpaper\",\"liquid glass ui\",\"liquid glass iphone\"]]" },
@@ -87,7 +86,7 @@ pub const Scene = struct {
         }
     }
 
-    /// Google's page in the panel's body while it previews, a moment after
+    /// DuckDuckGo's page in the panel's body while it previews, a moment after
     /// Return, as a page loads.
     fn results(d: *Scene, c: *ui.Context, top: f32) void {
         const bytes = d.serp orelse return;
@@ -185,8 +184,8 @@ pub const Scene = struct {
         ui.text(c, "Mon 2 Nov  9:41", st);
     }
 
-    /// Google answers a beat after it's asked, as it would.
-    pub fn google(d: *Scene) void {
+    /// DuckDuckGo answers a beat after it's asked, as it would.
+    pub fn complete(d: *Scene) void {
         if (d.asked_at < 0 or d.now - d.asked_at < 0.3) return;
         d.asked_at = -1;
         const q = d.asked[0..d.asked_len];

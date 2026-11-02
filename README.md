@@ -2,20 +2,20 @@
 
 <h1 align="center">Nanolight</h1>
 <p align="center"><b>A ⌘Space launcher for the Mac, drawn by <a href="https://github.com/justrach/nanoui">nanoui</a>.</b><br>
-Apps, math, Google, Grok and X: one keystroke away. Native Zig, no Electron, about 1 MB.</p>
+Apps, math, DuckDuckGo and Grok: one keystroke away. Native Zig, no Electron, about 1 MB.</p>
 
-<p align="center"><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><img src="docs/promo-preview.gif" alt="Nanolight in 31 seconds: apps, initials, typos, math, Google suggestions and results in the panel, on a MacBook Air" width="760"></a><br><sub><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><b>Watch it with sound →</b></a> · <a href="docs/promo.md">How it was made</a></sub></p>
+<p align="center"><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><img src="docs/promo-preview.gif" alt="Nanolight in 31 seconds: apps, initials, typos, math, Google suggestions and results in the panel, on a MacBook Air" width="760"></a><br><sub><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><b>Watch the original promo with sound →</b></a> · <a href="docs/promo.md">How it was made</a></sub></p>
 
 <p align="center"><img src="docs/images/nanolight.jpg" alt="Nanolight's panel has found Safari from &quot;saf&quot;" width="760"></p>
 
 ## What it does
 
 - **Finds apps as you type**: whole names, starts of words, initials (`ss` is System Settings), letters in order, and typos (`chorme` is Chrome). What you open often climbs.
-- **Completes inline**: the rest of the top app's name, or of Google's top suggestion, is drawn faintly after the caret. Tab or → takes it; Return never does.
+- **Completes inline**: the rest of the top app's name, or of DuckDuckGo's top suggestion, is drawn faintly after the caret. Tab or → takes it; Return never does.
 - **Does math**: `2^10 * 3` answers 3,072 (and `0xC00`). Return copies it.
-- **Google suggestions**: up to four, under the apps, the words you add in bold. Nothing that reads as an address (a dot, a slash, an @) is sent.
-- **Results in the panel**: Return on a search shows Google's page in the panel itself. Esc goes back to the list, ⌘↩ opens it in your browser, ⌘[ goes back a page.
-- **Ask Grok, search X**, a row away.
+- **DuckDuckGo suggestions**: up to four, under the apps, the words you add in bold. Nothing that reads as an address (a dot, a slash, an @) is sent.
+- **Search in your browser**: Return on a search or suggestion opens DuckDuckGo in your default browser and closes the panel.
+- **Ask Grok**, a row away.
 - **⌘1–⌘9** run a row at once; ↑ ↓ and ⌃N ⌃P move.
 - Lives in the menu bar: no Dock icon, and nothing drawn while it's idle.
 
@@ -24,7 +24,7 @@ Apps, math, Google, Grok and X: one keystroke away. Native Zig, no Electron, abo
 Off until you turn it on: choose **Sign In with Codegraff to Sync Across Macs…** in the menu bar icon's menu. Your browser opens codegraff.com to approve the sign-in, and from then on every Mac signed in to the same account shares:
 
 - the key that opens Nanolight,
-- whether Google suggestions are on,
+- whether DuckDuckGo suggestions are on,
 - how often you open each app, so an empty panel suggests the same apps everywhere.
 
 Two Macs merge rather than overwrite: the key and the suggestions setting follow whichever Mac changed them last, and each app keeps its higher count. Nothing else is sent: no queries, no history, no files. The sign-in key is kept in your Keychain, and **Sign Out of Codegraff** revokes it.
@@ -59,8 +59,7 @@ VERSION=0.1.0 sh macos/package.sh   # the release: signed app, disk image, updat
 | `src/results.zig` | What a query lists, in order |
 | `src/search.zig` | Fuzzy matching and ranking, allocation-free |
 | `src/calc.zig` | The calculator |
-| `src/suggest.zig` | Google's completions: the privacy guard, decoding, the cache (after [browse](https://github.com/justrach/browse)) |
-| `src/preview.zig` | The results page in the panel (WKWebView) |
+| `src/suggest.zig` | DuckDuckGo's completions: the privacy guard, decoding, the cache (after [browse](https://github.com/justrach/browse)) |
 | `src/onboard.zig`, `src/shortcut.zig` | The welcome, and which key is free |
 | `src/film.zig`, `src/stage.zig`, `tools/film.sh` | The walkthrough, rendered offscreen |
 | `src/promo.zig`, `src/promo_cards.zig`, `tools/promo.sh`, `tools/promo/` | The promo: nanoui's shots, Blender's laptop ([docs/promo.md](docs/promo.md)) |

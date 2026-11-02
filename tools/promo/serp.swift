@@ -1,5 +1,5 @@
-// Google's results page as Nanolight's panel shows it: a WKWebView that
-// says it is Safari (as preview.zig's does), in a window never put on
+// DuckDuckGo's results page as Nanolight's panel shows it: a WKWebView that
+// says it is Safari, in a window never put on
 // screen, snapshotted to PNG. swift tools/promo/serp.swift <query> <out.png>
 import AppKit
 import WebKit
@@ -17,8 +17,8 @@ final class Grab: NSObject, WKNavigationDelegate {
         win.appearance = NSAppearance(named: .darkAqua)
         win.contentView = web
         web.navigationDelegate = self
-        var c = URLComponents(string: "https://www.google.com/search")!
-        c.queryItems = [.init(name: "q", value: query), .init(name: "hl", value: "en")]
+        var c = URLComponents(string: "https://duckduckgo.com/")!
+        c.queryItems = [.init(name: "q", value: query)]
         web.load(URLRequest(url: c.url!))
     }
     func webView(_ w: WKWebView, didFinish _: WKNavigation!) {

@@ -1,5 +1,8 @@
 # The promo
 
+This page describes the original promo. The app now opens DuckDuckGo searches in the default browser and no longer includes X search.
+The promo source uses the current app, but the checked-in video and GIF show the original version.
+
 [promo.mp4](promo.mp4) is 30 seconds, 1920 × 1080 at 60 fps. [promo-preview.gif](promo-preview.gif) is the same video, silent and smaller. `tools/promo.sh` makes both in a few minutes.
 
 | Time | Shot |

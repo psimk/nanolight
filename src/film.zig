@@ -69,11 +69,11 @@ const script = [_]Step{
     .{ .at = 11.0, .op = .enter },
     .{ .at = 11.0, .op = .{ .caption = "↩ copies the answer" } },
     .{ .at = 12.5, .op = .clear },
-    .{ .at = 12.5, .op = .{ .caption = "Anything else: ask Grok, or search X" } },
+    .{ .at = 12.5, .op = .{ .caption = "Anything else: ask Grok, or search DuckDuckGo" } },
 } ++ typing(12.8, "liquid glass", 0.065) ++ [_]Step{
     .{ .at = 14.5, .op = down },
     .{ .at = 15.4, .op = .enter },
-    .{ .at = 15.4, .op = .{ .caption = "→ x.com/search?q=liquid+glass" } },
+    .{ .at = 15.4, .op = .{ .caption = "→ grok.com/?q=liquid+glass" } },
     .{ .at = 16.9, .op = .show },
     .{ .at = 16.9, .op = .{ .caption = "Back with the last query selected" } },
     .{ .at = 18.0, .op = esc },
