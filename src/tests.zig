@@ -318,6 +318,40 @@ test "the welcome: a key, pressed for real, then a first search" {
     try std.testing.expectEqual(shortcut.Choice.ctrl_space, steps.applied.?);
 }
 
+test "Command D can be picked and tried in the welcome" {
+    const gpa = std.testing.allocator;
+    var ix: Index = .init(gpa);
+    defer ix.deinit();
+    var o: onboard.Onboard = .{};
+    o.start(.cmd_space);
+    var steps: Steps = .{};
+    o.hooks = .{ .ctx = &steps, .apply = Steps.apply, .fix = Steps.fix, .done = Steps.finished };
+    var s: view.Nanolight = .{ .index = &ix, .onboard = &o };
+    defer s.query.deinit();
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&s, view.Nanolight.view), .{ .width = view.width, .height = 480, .dark = true });
+    defer t.deinit();
+    t.settle(1);
+    try std.testing.expect(t.hasText("⌘ D"));
+    t.key(.left);
+    try std.testing.expectEqual(shortcut.Choice.cmd_d, o.choice);
+    try std.testing.expect(t.hasText("⌘ D is free on this Mac."));
+    t.key(.right);
+    try std.testing.expectEqual(shortcut.Choice.cmd_space, o.choice);
+    t.key(.left);
+    t.key(.enter);
+    t.settle(1);
+    try std.testing.expectEqual(shortcut.Choice.cmd_d, steps.applied.?);
+    try std.testing.expect(t.hasText("Press ⌘ D now"));
+    try std.testing.expect(t.hasText("D"));
+    try std.testing.expect(!t.hasText("Space"));
+    o.pressed(true);
+    o.pressed(false);
+    t.settle(2);
+    try std.testing.expectEqual(onboard.Step.done, o.step);
+    try std.testing.expect(t.hasText("⌘ D opens it anywhere. Start with one of these:"));
+}
+
 test "the panel never outgrows its window, which is never resized" {
     const gpa = std.testing.allocator;
     var ix: Index = .init(gpa);

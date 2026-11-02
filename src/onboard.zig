@@ -109,8 +109,8 @@ pub const Onboard = struct {
     }
 
     fn keyStep(o: *Onboard, c: *ui.Context, p: Palette, enter: bool) void {
-        if (c.input.key == .left) o.choice = Choice.all[(@intFromEnum(o.choice) + Choice.all.len - 1) % Choice.all.len];
-        if (c.input.key == .right) o.choice = Choice.all[(@intFromEnum(o.choice) + 1) % Choice.all.len];
+        if (c.input.key == .left) o.choice = Choice.all[(@backingInt(o.choice) + Choice.all.len - 1) % Choice.all.len];
+        if (c.input.key == .right) o.choice = Choice.all[(@backingInt(o.choice) + 1) % Choice.all.len];
         if (enter) return o.next(c, .try_it);
         {
             const top = ui.div(c).row().wFull().px(28).pt(28).pb(22).gap(16).itemsCenter();
@@ -199,14 +199,14 @@ pub const Onboard = struct {
             defer caps.end();
             const ch = o.choice;
             const held_mod = switch (ch) {
-                .cmd_space => c.input.cmd,
+                .cmd_space, .cmd_d => c.input.cmd,
                 .opt_space => c.input.alt,
                 .ctrl_space => c.input.ctrl,
                 .opt_cmd_space => c.input.alt and c.input.cmd,
             };
             cap(c, p, ch.mods(), 68, held_mod or o.reopened);
             ui.text(c, "+", .{ .size = 20, .weight = .medium, .color = p.sub.alpha(0.6) });
-            cap(c, p, "Space", 180, o.reopened);
+            cap(c, p, ch.keyLabel(), 180, o.reopened);
         }
         {
             const t = ui.div(c).column().gap(6).itemsCenter();
@@ -281,7 +281,7 @@ pub const Onboard = struct {
         ui.div(c).wFull().h(1).bg(p.hair).end();
         const bar = ui.div(c).row().wFull().h(38).px(16).gap(8).itemsCenter();
         defer bar.end();
-        const n: usize = @intFromEnum(o.step);
+        const n: usize = @backingInt(o.step);
         for (0..3) |i| ui.div(c).w(if (i == n) 16 else 6).h(6).roundedFull().bg(if (i == n) p.text.alpha(0.7) else p.sub.alpha(0.3)).end();
         ui.textf(c, .{ .size = 12, .color = p.sub.alpha(0.8), .tabular = true }, "  {d} of 3", .{n + 1});
         ui.spacer(c);

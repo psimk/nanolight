@@ -15,8 +15,9 @@ pub const Choice = enum {
     opt_space,
     ctrl_space,
     opt_cmd_space,
+    cmd_d,
 
-    pub const all = [_]Choice{ .cmd_space, .opt_space, .ctrl_space, .opt_cmd_space };
+    pub const all = [_]Choice{ .cmd_space, .opt_space, .ctrl_space, .opt_cmd_space, .cmd_d };
 
     pub fn label(c: Choice) []const u8 {
         return switch (c) {
@@ -24,13 +25,28 @@ pub const Choice = enum {
             .opt_space => "⌥ Space",
             .ctrl_space => "⌃ Space",
             .opt_cmd_space => "⌥ ⌘ Space",
+            .cmd_d => "⌘ D",
+        };
+    }
+
+    pub fn key(c: Choice) u32 {
+        return switch (c) {
+            .cmd_d => hotkey.d,
+            else => hotkey.space,
+        };
+    }
+
+    pub fn keyLabel(c: Choice) []const u8 {
+        return switch (c) {
+            .cmd_d => "D",
+            else => "Space",
         };
     }
 
     /// The modifier glyphs alone, for a key cap.
     pub fn mods(c: Choice) []const u8 {
         return switch (c) {
-            .cmd_space => "⌘",
+            .cmd_space, .cmd_d => "⌘",
             .opt_space => "⌥",
             .ctrl_space => "⌃",
             .opt_cmd_space => "⌥⌘",
@@ -40,7 +56,7 @@ pub const Choice = enum {
     /// Carbon's modifier bits.
     pub fn carbon(c: Choice) u32 {
         return switch (c) {
-            .cmd_space => hotkey.cmd,
+            .cmd_space, .cmd_d => hotkey.cmd,
             .opt_space => hotkey.option,
             .ctrl_space => hotkey.control,
             .opt_cmd_space => hotkey.option | hotkey.cmd,
@@ -50,7 +66,7 @@ pub const Choice = enum {
     /// AppKit's modifier flags, as the system's shortcut table keeps them.
     pub fn appkit(c: Choice) u64 {
         return switch (c) {
-            .cmd_space => ns_cmd,
+            .cmd_space, .cmd_d => ns_cmd,
             .opt_space => ns_opt,
             .ctrl_space => ns_ctrl,
             .opt_cmd_space => ns_opt | ns_cmd,
@@ -123,7 +139,7 @@ fn systemName(id: u32) []const u8 {
 /// The clash for `c`, from the system's shortcuts and the running launchers.
 pub fn clash(c: Choice, system: []const SystemKey, others: *const Others) Clash {
     var out: Clash = .{};
-    for (system) |k| if (k.enabled and k.key == hotkey.space and k.mods & ns_mods == c.appkit()) {
+    for (system) |k| if (k.enabled and k.key == c.key() and k.mods & ns_mods == c.appkit()) {
         out.system = systemName(k.id);
         out.system_id = k.id;
         break;
@@ -133,7 +149,7 @@ pub fn clash(c: Choice, system: []const SystemKey, others: *const Others) Clash 
     return out;
 }
 
-/// The system's shortcuts on Space (macOS keeps them in its defaults).
+/// The system's shortcuts on supported keys (macOS keeps them in its defaults).
 pub fn systemKeys(buf: []SystemKey) []SystemKey {
     if (!mac) return buf[0..0];
     const pool = objc.Pool.push();
@@ -152,12 +168,12 @@ pub fn systemKeys(buf: []SystemKey) []SystemKey {
         const params = objc.msg(?objc.Object, value, "objectForKey:", .{objc.nsString("parameters")}) orelse continue;
         if (objc.msg(objc.NSUInteger, params, "count", .{}) < 3) continue;
         const key: objc.NSInteger = objc.msg(objc.NSInteger, objc.msg(objc.Object, params, "objectAtIndex:", .{@as(objc.NSUInteger, 1)}), "integerValue", .{});
-        if (key != hotkey.space) continue;
+        if (key != hotkey.space and key != hotkey.d) continue;
         const flags = objc.msg(objc.NSInteger, objc.msg(objc.Object, params, "objectAtIndex:", .{@as(objc.NSUInteger, 2)}), "integerValue", .{});
         buf[n] = .{
             .id = @intCast(@max(0, objc.msg(objc.NSInteger, k, "integerValue", .{}))),
             .enabled = objc.msg(objc.BOOL, enabled, "boolValue", .{}),
-            .key = hotkey.space,
+            .key = @intCast(key),
             .mods = @bitCast(@as(i64, flags)),
         };
         n += 1;
@@ -234,9 +250,32 @@ test "the choice is kept" {
     var mem: nanoui.kv.Memory = .{ .gpa = std.testing.allocator };
     defer mem.deinit();
     try std.testing.expectEqual(Choice.cmd_space, load(mem.store(), std.testing.allocator));
-    save(mem.store(), .ctrl_space);
-    try std.testing.expectEqual(Choice.ctrl_space, load(mem.store(), std.testing.allocator));
+    for (Choice.all) |c| {
+        save(mem.store(), c);
+        try std.testing.expectEqual(c, load(mem.store(), std.testing.allocator));
+    }
     try std.testing.expect(!onboarded(mem.store()));
     setOnboarded(mem.store());
     try std.testing.expect(onboarded(mem.store()));
+}
+
+test "Command D uses its own key and finds only matching system shortcuts" {
+    const t = std.testing;
+    try t.expectEqual(@as(u32, 2), Choice.cmd_d.key());
+    try t.expectEqual(hotkey.cmd, Choice.cmd_d.carbon());
+    var others: Others = .{};
+    others.names[0] = "Raycast";
+    others.n = 1;
+    const unrelated = [_]SystemKey{
+        .{ .id = 64, .enabled = true, .key = hotkey.space, .mods = ns_cmd },
+        .{ .id = 65, .enabled = false, .key = hotkey.d, .mods = ns_cmd },
+        .{ .id = 66, .enabled = true, .key = hotkey.d, .mods = ns_cmd | (1 << 17) },
+    };
+    try t.expect(clash(.cmd_d, &unrelated, &others).clear());
+    const matching = [_]SystemKey{.{ .id = 67, .enabled = true, .key = hotkey.d, .mods = ns_cmd }};
+    const c = clash(.cmd_d, &matching, &others);
+    try t.expectEqual(@as(u32, 67), c.system_id);
+    try t.expectEqualStrings("a macOS shortcut", c.system.?);
+    try t.expectEqual(@as(usize, 0), c.launchers.len);
+    try t.expect(clash(.cmd_space, &matching, &.{}).clear());
 }

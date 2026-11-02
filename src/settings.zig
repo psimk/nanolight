@@ -92,7 +92,7 @@ test "a record round-trips, and what isn't one isn't taken" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
-    const s: Settings = .{ .hotkey = "cmd_space", .suggest = true, .at = 1793600000, .launches = &.{.{ .name = "Visual \"Studio\" Code", .count = 3 }} };
+    const s: Settings = .{ .hotkey = "cmd_d", .suggest = true, .at = 1793600000, .launches = &.{.{ .name = "Visual \"Studio\" Code", .count = 3 }} };
     const body = try encode(a, s);
     const back = decode(a, body).?;
     try std.testing.expect(same(s, back));

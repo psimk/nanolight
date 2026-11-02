@@ -344,7 +344,7 @@ const Live = struct {
 
     fn useKey(l: *Live, choice: shortcut.Choice) void {
         l.choice = choice;
-        hotkey.register(hotkey.space, choice.carbon(), .{ .ctx = l, .func = toggle }) catch |e|
+        hotkey.register(choice.key(), choice.carbon(), .{ .ctx = l, .func = toggle }) catch |e|
             std.log.warn("nanolight: {s} can't be registered ({s}); open it from the menu bar", .{ choice.label(), @errorName(e) });
     }
 

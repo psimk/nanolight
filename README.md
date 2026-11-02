@@ -35,7 +35,7 @@ Syncing goes through your Codegraff account, so [Codegraff's terms](https://code
 
 Download `nanolight-macos-arm64.dmg` from the [latest release](https://github.com/justrach/nanolight/releases/latest), open it and drag Nanolight to Applications. macOS 14 or later, Apple silicon.
 
-On first run a short welcome picks the key that opens it (⌘Space, ⌥Space, ⌃Space or ⌥⌘Space) and says who else holds it: Spotlight gives up ⌘Space in System Settings → Keyboard → Keyboard Shortcuts → Spotlight. Signed releases update themselves from this repository's releases; the menu bar icon offers the restart.
+On first run a short welcome picks the key that opens it (⌘Space, ⌥Space, ⌃Space, ⌥⌘Space or ⌘D) and says who else holds it: Spotlight gives up ⌘Space in System Settings → Keyboard → Keyboard Shortcuts → Spotlight. To change the shortcut later, choose **Welcome…** from the menu bar icon's menu. Signed releases update themselves from this repository's releases; the menu bar icon offers the restart.
 
 ## Build
 

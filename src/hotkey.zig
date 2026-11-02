@@ -19,6 +19,7 @@ pub const option: u32 = 1 << 11;
 pub const control: u32 = 1 << 12;
 /// kVK_Space.
 pub const space: u32 = 49;
+pub const d: u32 = 2;
 
 pub const Pressed = struct { ctx: *anyopaque, func: *const fn (ctx: *anyopaque) void };
 
