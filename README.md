@@ -19,6 +19,24 @@ Apps, math, DuckDuckGo and Grok: one keystroke away. Native Zig, no Electron, ab
 - **⌘1–⌘9** run a row at once; ↑ ↓ and ⌃N ⌃P move.
 - Lives in the menu bar: no Dock icon, and nothing drawn while it's idle.
 
+## Window management
+
+Open Nanolight with your shortcut, then type a command and press Return. The command acts on the window you used before opening Nanolight.
+
+- **Left Half**, **Right Half**, **Top Half**, **Bottom Half**.
+- **Top Left Quarter**, **Top Right Quarter**, **Bottom Left Quarter**, **Bottom Right Quarter**.
+- **Maximize** fills the display without covering the Dock or menu bar. **Center** keeps the window's size.
+- **Restore** returns the window to its position before its first arrangement in this Nanolight session.
+- **Next Display** and **Previous Display** move the window between displays and keep its relative size and position.
+
+You can also type `window left half` or `quarter`. Window commands stay local and do not request web suggestions.
+
+macOS requires Accessibility access to move other apps' windows. The first window command requests access if it is missing and shows an **Open Settings** button.
+Allow Nanolight in **System Settings → Privacy & Security → Accessibility**, then retry the command.
+For a development build, allow the executable or terminal that macOS lists. Packaged builds appear as Nanolight.
+
+Some apps limit window movement or resizing. Leave full screen before arranging a window.
+
 ## Sync across Macs (optional)
 
 Off until you turn it on: choose **Sign In with Codegraff to Sync Across Macs…** in the menu bar icon's menu. Your browser opens codegraff.com to approve the sign-in, and from then on every Mac signed in to the same account shares:
@@ -59,6 +77,7 @@ VERSION=0.1.0 sh macos/package.sh   # the release: signed app, disk image, updat
 | `src/results.zig` | What a query lists, in order |
 | `src/search.zig` | Fuzzy matching and ranking, allocation-free |
 | `src/calc.zig` | The calculator |
+| `src/window_layout.zig`, `src/window_control.zig` | Window commands, display geometry, and macOS Accessibility control |
 | `src/suggest.zig` | DuckDuckGo's completions: the privacy guard, decoding, the cache (after [browse](https://github.com/justrach/browse)) |
 | `src/onboard.zig`, `src/shortcut.zig` | The welcome, and which key is free |
 | `src/film.zig`, `src/stage.zig`, `tools/film.sh` | The walkthrough, rendered offscreen |
