@@ -2,7 +2,7 @@
 //! ⌘Space, or the key picked in its welcome (onboard.zig), or from its
 //! menu bar icon; finds apps as you type (initials
 //! too: "ss" is System Settings), answers math, and hands anything else to
-//! Grok or DuckDuckGo in the browser, with DuckDuckGo's completions in the
+//! DuckDuckGo in the browser, with DuckDuckGo's completions in the
 //! panel (suggest.zig). Its panel is the system's vibrancy
 //! (NSVisualEffectView, as launchers use), nanoui drawing on it.
 //! It lives in the menu bar: no Dock icon, nothing drawn while idle.

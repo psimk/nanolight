@@ -49,10 +49,10 @@ const list_pad = 6;
 const status_h = 62;
 /// The room a window leaves round the panel for its shadow (`Nanolight.margin`).
 pub const shadow_margin: f32 = 40;
-/// The tallest the panel gets: every app row, both web rows and
-/// DuckDuckGo's completions, under three section heads (math lists fewer), or
+/// The tallest the panel gets: every app row, the search row and
+/// DuckDuckGo's completions, under two section heads (math lists fewer), or
 /// a search's page. The window is this tall.
-pub const max_height: f32 = header_h + footer_h + 2 + list_pad * 2 + results.max_rows * row_h + 3 * section_h;
+pub const max_height: f32 = header_h + footer_h + 2 + list_pad * 2 + results.max_rows * row_h + 2 * section_h;
 
 /// Where a search's page goes in a panel `h` tall: from `y` down from its
 /// top, `h` tall, between the header and the footer, the panel's width.
@@ -271,7 +271,7 @@ pub const Nanolight = struct {
             .bare = true,
             .size = 21,
             .width = .fill,
-            .placeholder = "Search apps, do math, ask Grok…",
+            .placeholder = "Search apps, arrange windows, search the web…",
             .placeholder_color = p.sub.alpha(0.75),
             .color = p.text,
         });
@@ -429,16 +429,9 @@ pub const Nanolight = struct {
                 const w = s.web.get(r.web);
                 ui.richText(c, w, s.added(i, w, p), .{ .size = 13.5, .color = p.text.alpha(0.72), .truncate = .ellipsis });
             },
-            .ask_grok, .search_web => {
-                const verb = switch (r.kind) {
-                    .ask_grok => "Ask Grok",
-                    else => "Search DuckDuckGo for",
-                };
-                ui.textf(c, .{ .size = 13.5, .weight = .medium, .color = p.text, .truncate = .ellipsis }, "{s} “{s}”", .{ verb, std.mem.trim(u8, q, " ") });
-                ui.text(c, switch (r.kind) {
-                    .ask_grok => "grok.com",
-                    else => "duckduckgo.com",
-                }, .{ .size = 12, .color = p.sub.alpha(0.8) });
+            .search_web => {
+                ui.textf(c, .{ .size = 13.5, .weight = .medium, .color = p.text, .truncate = .ellipsis }, "Search DuckDuckGo for “{s}”", .{std.mem.trim(u8, q, " ")});
+                ui.text(c, "duckduckgo.com", .{ .size = 12, .color = p.sub.alpha(0.8) });
             },
         }
         ui.spacer(c);
@@ -493,7 +486,6 @@ pub const Nanolight = struct {
         defer box.end();
         ui.icon(c, switch (r.kind) {
             .calc => "plus.forwardslash.minus",
-            .ask_grok => "sparkles",
             .window => "macwindow",
             .search_web => "globe",
             .suggest => "magnifyingglass",
@@ -579,7 +571,6 @@ pub const Nanolight = struct {
                 s.failure = null;
                 host.hide(host.ctx);
             },
-            .ask_grok => s.go(results.url(&s.url_buf, r.kind, s.query.text())),
             .search_web => s.search(s.query.text()),
             .suggest => {
                 // Its words fill the field, as a search box's would.

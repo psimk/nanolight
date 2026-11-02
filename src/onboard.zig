@@ -34,7 +34,7 @@ pub const Hooks = struct {
 const examples = [_]struct { q: []const u8, what: []const u8, icon: []const u8 }{
     .{ .q = "saf", .what = "Open Safari", .icon = "app.badge" },
     .{ .q = "2^10 * 3", .what = "Do math", .icon = "plus.forwardslash.minus" },
-    .{ .q = "liquid glass", .what = "Search DuckDuckGo or ask Grok", .icon = "sparkles" },
+    .{ .q = "liquid glass", .what = "Search DuckDuckGo", .icon = "magnifyingglass" },
 };
 
 pub const Onboard = struct {
@@ -119,7 +119,7 @@ pub const Onboard = struct {
             const t = ui.div(c).column().gap(4);
             defer t.end();
             ui.text(c, "Welcome to Nanolight", .{ .size = 22, .weight = .semibold, .color = p.text, .tracking = -0.3 });
-            ui.text(c, "Apps, math, DuckDuckGo and Grok — one keystroke away.", .{ .size = 13.5, .color = p.sub });
+            ui.text(c, "Apps, math and DuckDuckGo — one keystroke away.", .{ .size = 13.5, .color = p.sub });
         }
         ui.div(c).wFull().h(1).bg(p.hair).end();
         const body = ui.div(c).column().wFull().px(28).pt(18).gap(12);
