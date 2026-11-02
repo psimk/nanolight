@@ -23,8 +23,8 @@ pub const Host = struct {
     /// DuckDuckGo's completions of a query aren't known: ask for them, and
     /// answer with `Nanolight.answered`. Without it, none are listed.
     suggest: ?*const fn (ctx: *anyopaque, query: []const u8) void = null,
-    /// Shows a search's page in the panel, over `webArea`; null takes it
-    /// away. Without it, searches open in the browser.
+    /// Shows a search's page in the promo, over `webArea`; null takes it
+    /// away. The app leaves this unset so searches open in the browser.
     preview: ?*const fn (ctx: *anyopaque, url: ?[]const u8) void = null,
 };
 

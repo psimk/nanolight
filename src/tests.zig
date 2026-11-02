@@ -122,16 +122,14 @@ test "the panel finds, moves, answers and hands off" {
 const suggest = @import("suggest.zig");
 const results = @import("results.zig");
 
-/// A host that answers for DuckDuckGo and shows pages: what was asked, shown.
+/// A host that answers for DuckDuckGo and opens searches in the browser.
 const Web = struct {
     probe: Probe = .{},
     asked: [64]u8 = undefined,
     asked_len: usize = 0,
-    page: [256]u8 = undefined,
-    page_len: ?usize = null,
 
     fn host(w: *Web) view.Host {
-        return .{ .ctx = w, .open = open, .hide = hide, .suggest = ask, .preview = show };
+        return .{ .ctx = w, .open = open, .hide = hide, .suggest = ask };
     }
     fn open(ctx: *anyopaque, target: []const u8) void {
         const w: *Web = @ptrCast(@alignCast(ctx));
@@ -146,18 +144,9 @@ const Web = struct {
         @memcpy(w.asked[0..q.len], q);
         w.asked_len = q.len;
     }
-    fn show(ctx: *anyopaque, url: ?[]const u8) void {
-        const w: *Web = @ptrCast(@alignCast(ctx));
-        const u = url orelse {
-            w.page_len = null;
-            return;
-        };
-        @memcpy(w.page[0..u.len], u);
-        w.page_len = u.len;
-    }
 };
 
-test "DuckDuckGo's completions land below, and a search shows in the panel" {
+test "DuckDuckGo's completions land below, and searches open in the browser" {
     const gpa = std.testing.allocator;
     var ix: Index = .init(gpa);
     defer ix.deinit();
@@ -212,42 +201,32 @@ test "DuckDuckGo's completions land below, and a search shows in the panel" {
     press(&t, &.{.{ .command = .delete_backward }});
     try std.testing.expectEqual(@as(usize, 0), web.asked_len);
 
-    // ⌘3, the second completion: its words in the field, DuckDuckGo's page in the panel.
+    // ⌘3 opens the second completion in the browser and hides the panel.
     try std.testing.expect(t.shortcut(.{ .key = '3', .cmd = true }));
     t.settle(1);
     try std.testing.expectEqualStrings("liquid glass apple", s.query.text());
-    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=liquid+glass+apple", web.page[0..web.page_len.?]);
-    t.settle(2);
-    try std.testing.expect(t.hasText("Open in Browser"));
-    try std.testing.expectEqual(view.max_height, s.height());
-    try std.testing.expect(!web.probe.hidden);
-    // Escape: the rows again, the page gone.
-    _ = t.shortcut(.{ .key = ui.Shortcut.escape });
-    try std.testing.expect(web.page_len == null);
-    try std.testing.expectEqualStrings("liquid glass apple", s.query.text());
-
-    // Return on words no app matches: DuckDuckGo's page; typing takes it away.
-    press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "pizza" } });
-    press(&t, &.{.{ .command = .insert_newline }});
-    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizza", web.page[0..web.page_len.?]);
-    press(&t, &.{.{ .insert = "s" }});
-    try std.testing.expect(web.page_len == null);
-    try std.testing.expect(t.hasText("Search DuckDuckGo for “pizzas”"));
-
-    // ⌘↩ in the page, and on the row: the browser, and the panel hides.
-    while (s.res.rows[s.sel].kind != .search_web) _ = t.shortcut(.{ .key = ui.Shortcut.down });
-    press(&t, &.{.{ .command = .insert_newline }});
-    try std.testing.expect(web.page_len != null);
-    try std.testing.expect(t.shortcut(.{ .key = ui.Shortcut.enter, .cmd = true }));
-    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=liquid+glass+apple", web.probe.opened[0..web.probe.opened_len]);
     try std.testing.expect(web.probe.hidden);
+    try std.testing.expect(!s.previewing);
+    try std.testing.expect(!t.hasText("Open in Browser"));
+
     s.reveal();
-    try std.testing.expect(web.page_len == null);
+    web.probe = .{};
+    press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "pizza" } });
+    try std.testing.expect(!web.probe.hidden);
+    press(&t, &.{.{ .command = .insert_newline }});
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizza", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expect(web.probe.hidden);
+    try std.testing.expect(!s.previewing);
+    try std.testing.expectEqualStrings("pizza", s.query.text());
+
+    s.reveal();
     web.probe = .{};
     t.settle(1);
-    while (s.res.rows[s.sel].kind != .search_web) _ = t.shortcut(.{ .key = ui.Shortcut.down });
     try std.testing.expect(t.shortcut(.{ .key = ui.Shortcut.enter, .cmd = true }));
-    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizza", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expect(web.probe.hidden);
+    try std.testing.expect(!s.previewing);
 }
 
 const onboard = @import("onboard.zig");

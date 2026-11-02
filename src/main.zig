@@ -2,8 +2,8 @@
 //! ⌘Space, or the key picked in its welcome (onboard.zig), or from its
 //! menu bar icon; finds apps as you type (initials
 //! too: "ss" is System Settings), answers math, and hands anything else to
-//! Grok or DuckDuckGo, with DuckDuckGo's completions of it (suggest.zig) and its
-//! results in the panel (preview.zig). Its panel is the system's vibrancy
+//! Grok or DuckDuckGo in the browser, with DuckDuckGo's completions in the
+//! panel (suggest.zig). Its panel is the system's vibrancy
 //! (NSVisualEffectView, as launchers use), nanoui drawing on it.
 //! It lives in the menu bar: no Dock icon, nothing drawn while idle.
 //!
@@ -20,7 +20,6 @@ const hotkey = @import("hotkey.zig");
 const shortcut = @import("shortcut.zig");
 const Onboard = @import("onboard.zig").Onboard;
 const suggest = @import("suggest.zig");
-const Preview = @import("preview.zig").Preview;
 const single = @import("single.zig");
 const ClickThrough = @import("clickthrough.zig").ClickThrough;
 const account = @import("account.zig");
@@ -48,7 +47,6 @@ const Live = struct {
     window: ?*nanoui.Window = null,
     /// The system's glass under the panel, which the window's views keep.
     glass: ?objc.Object = null,
-    preview: Preview = .{},
     /// Clicks outside the panel go to what is under it (clickthrough.zig).
     through: ClickThrough = .{},
     /// The words DuckDuckGo is to be asked about once typing pauses, and how
@@ -67,7 +65,7 @@ const Live = struct {
     account_label: [192]u8 = undefined,
 
     fn host(l: *Live) view.Host {
-        return .{ .ctx = l, .open = open, .hide = hide, .resize = resize, .suggest = ask, .preview = showPage };
+        return .{ .ctx = l, .open = open, .hide = hide, .resize = resize, .suggest = ask };
     }
 
     fn open(ctx: *anyopaque, target: []const u8) void {
@@ -200,27 +198,6 @@ const Live = struct {
         }, a, Ask.done);
     }
 
-    /// A search's page in the panel, or (null) not.
-    fn showPage(ctx: *anyopaque, url: ?[]const u8) void {
-        const l: *Live = @ptrCast(@alignCast(ctx));
-        const w = l.window orelse return;
-        if (url) |u| l.preview.show(w, u, l.s.last_h) else l.preview.hide();
-    }
-
-    /// Escape or ⌘↩ while the page has the keys.
-    fn pageKey(ctx: *anyopaque, key: @import("preview.zig").Key) void {
-        const l: *Live = @ptrCast(@alignCast(ctx));
-        switch (key) {
-            .escape => l.s.back(),
-            .open_out => {
-                var buf: [2048]u8 = undefined;
-                open(l, l.preview.current(&buf) orelse l.s.preview_url);
-                hide(l);
-            },
-        }
-        if (l.window) |w| w.redraw();
-    }
-
     fn toggleSuggest(l: *Live, item: *nanoui.menu.Item) void {
         l.s.suggest_on = item.checked;
         l.kv.set(suggest_key, if (item.checked) "1" else "0") catch {};
@@ -307,7 +284,6 @@ const Live = struct {
     /// view's frame, not the window's: nothing is laid out again).
     fn resize(ctx: *anyopaque, h: f32) void {
         const l: *Live = @ptrCast(@alignCast(ctx));
-        l.preview.fit(h);
         // The panel grew or shrank under a still pointer.
         l.through.update();
         const g = l.glass orelse return;
@@ -499,7 +475,6 @@ pub fn main(init: std.process.Init) !void {
     live.glass = backdrop(live.window.?, 18, if (o.active) o.height() else s.height());
     live.useKey(live.choice);
     live.through = .{ .window = live.window, .height = &s.last_h };
-    live.preview.watch(.{ .ctx = &live, .func = Live.pageKey });
     o.hooks = live.hooks();
     // The first run: the welcome, in the panel.
     if (!shortcut.onboarded(kv)) o.start(live.choice);
