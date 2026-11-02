@@ -1,8 +1,8 @@
 //! What the panel lists for a query, in order: the answer when it is math,
 //! the apps that match it (or, with no query, suggestions), then DuckDuckGo:
 //! a search for exactly what is typed, first, and DuckDuckGo's completions of
-//! it under that, a key or two away; last, the query asked of Grok or
-//! searched on X. With no app or answer, Return searches what was typed
+//! it under that, a key or two away; last, the query asked of Grok.
+//! With no app or answer, Return searches what was typed
 //! (as an address bar's does). Completions land a moment after the rest;
 //! the panel keeps the selection on the row it was on (`Nanolight.answered`).
 const std = @import("std");
@@ -13,7 +13,6 @@ pub const Kind = enum {
     calc,
     app,
     ask_grok,
-    search_x,
     search_web,
     /// One of DuckDuckGo's completions (`Row.web`).
     suggest,
@@ -23,7 +22,7 @@ pub const Kind = enum {
         return switch (k) {
             .calc => "Calculator",
             .app => "Application",
-            .ask_grok, .search_x, .search_web, .suggest => "Web",
+            .ask_grok, .search_web, .suggest => "Web",
         };
     }
 
@@ -33,7 +32,6 @@ pub const Kind = enum {
             .calc => "Copy Answer",
             .app => "Open Application",
             .ask_grok => "Ask Grok",
-            .search_x => "Search X",
             .search_web, .suggest => "Search DuckDuckGo",
         };
     }
@@ -43,7 +41,7 @@ pub const Kind = enum {
             .calc => "Calculator",
             .app => if (suggested) "Suggestions" else "Applications",
             .search_web, .suggest => "DuckDuckGo",
-            .ask_grok, .search_x => "Ask & Search",
+            .ask_grok => "Grok",
         };
     }
 };
@@ -61,10 +59,10 @@ pub const Row = struct {
 pub const max_apps = 6;
 /// DuckDuckGo's completions fill what room is left, up to four.
 pub const max_web = 4;
-/// Every app and the three web rows leave room for three completions.
-pub const max_rows = max_apps + 3 + 3;
-/// The web rows that always follow the apps: DuckDuckGo, Grok, X.
-const handoffs = 3;
+/// Every app and both web rows leave room for all four completions.
+pub const max_rows = max_apps + 2 + max_web;
+/// The web rows that always follow the apps: DuckDuckGo and Grok.
+const handoffs = 2;
 
 pub const Results = struct {
     rows: [max_rows]Row = undefined,
@@ -106,12 +104,11 @@ pub const Results = struct {
         for (ranked[0..n]) |x| r.push(.{ .kind = .app, .app = x.index, .match = x.match });
         if (r.n > 0 and r.rows[0].kind == .calc) return;
         // The search for what was typed, its completions (as many as leave
-        // room for the rest), then Grok and X.
+        // room for the rest), then Grok.
         const room = max_rows - r.n - handoffs;
         r.push(.{ .kind = .search_web });
         for (0..@min(web.len, max_web, room)) |i| r.push(.{ .kind = .suggest, .web = @intCast(i) });
         r.push(.{ .kind = .ask_grok });
-        r.push(.{ .kind = .search_x });
     }
 
     fn push(r: *Results, row: Row) void {
@@ -133,7 +130,6 @@ pub const Results = struct {
 pub fn url(buf: []u8, kind: Kind, query: []const u8) []const u8 {
     const base = switch (kind) {
         .ask_grok => "https://grok.com/?q=",
-        .search_x => "https://x.com/search?f=live&q=",
         .search_web, .suggest => "https://duckduckgo.com/?q=",
         .calc, .app => return "",
     };
@@ -162,11 +158,11 @@ test "math first, then apps; ask and search only without an answer" {
     r.build("saf", &names, &.{}, &.{}, &.{});
     try t.expectEqual(Kind.app, r.rows[0].kind);
     try t.expectEqual(@as(u32, 0), r.rows[0].app);
-    try t.expectEqual(Kind.search_web, r.rows[r.n - 3].kind);
+    try t.expectEqual(Kind.search_web, r.rows[r.n - 2].kind);
     try t.expectEqualStrings("Applications", r.section(0).?);
     try t.expectEqualStrings("DuckDuckGo", r.section(1).?);
-    try t.expectEqualStrings("Ask & Search", r.section(2).?);
-    try t.expect(r.section(3) == null);
+    try t.expectEqualStrings("Grok", r.section(2).?);
+    try t.expectEqual(@as(usize, 3), r.n);
     r.build("2^10 * 3", &names, &.{}, &.{}, &.{"ignored"});
     try t.expectEqual(Kind.calc, r.rows[0].kind);
     try t.expectEqualStrings("3,072", r.answer);
@@ -176,30 +172,34 @@ test "math first, then apps; ask and search only without an answer" {
     try t.expectEqual(@as(usize, 2), r.n);
     try t.expectEqualStrings("Suggestions", r.section(0).?);
     r.build("liquid glass", &names, &.{}, &.{}, &.{});
-    try t.expectEqual(@as(usize, 3), r.n);
+    try t.expectEqual(@as(usize, 2), r.n);
     // No app: the search for what was typed comes first.
     try t.expectEqual(Kind.search_web, r.rows[0].kind);
     try t.expectEqualStrings("DuckDuckGo", r.section(0).?);
-    try t.expectEqualStrings("Ask & Search", r.section(1).?);
-    // Completions under it, in the same section, then Grok and X.
+    try t.expectEqualStrings("Grok", r.section(1).?);
+    // Completions under it, in the same section, then Grok.
     r.build("liquid gl", &names, &.{}, &.{}, &.{ "liquid glass", "liquid glue" });
-    try t.expectEqual(@as(usize, 5), r.n);
+    try t.expectEqual(@as(usize, 4), r.n);
     try t.expectEqual(Kind.search_web, r.rows[0].kind);
     try t.expectEqual(Kind.suggest, r.rows[1].kind);
     try t.expectEqual(@as(u8, 1), r.rows[2].web);
     try t.expectEqual(Kind.ask_grok, r.rows[3].kind);
     try t.expect(r.section(1) == null and r.section(2) == null);
-    try t.expectEqualStrings("Ask & Search", r.section(3).?);
+    try t.expectEqualStrings("Grok", r.section(3).?);
     // A full list of apps still ends with every handoff.
     const many = [_][]const u8{ "Safari", "Mail", "Maps", "Pages", "Calendar", "Calculator", "FaceTime" };
     r.build("a", &many, &.{}, &.{}, &.{ "a1", "a2", "a3", "a4" });
     try t.expectEqual(max_rows, r.n);
     try t.expectEqual(Kind.search_web, r.rows[max_apps].kind);
     try t.expectEqual(Kind.suggest, r.rows[max_apps + 1].kind);
-    try t.expectEqual(Kind.search_x, r.rows[max_rows - 1].kind);
+    try t.expectEqual(@as(u8, 3), r.rows[max_rows - 2].web);
+    try t.expectEqual(Kind.suggest, r.rows[max_rows - 2].kind);
+    try t.expectEqual(Kind.ask_grok, r.rows[max_rows - 1].kind);
 }
 
 test "queries are escaped into the address" {
     var buf: [128]u8 = undefined;
-    try std.testing.expectEqualStrings("https://x.com/search?f=live&q=liquid+glass+%26+UI", url(&buf, .search_x, " liquid glass & UI "));
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=liquid+glass+%26+UI", url(&buf, .search_web, " liquid glass & UI "));
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=caf%C3%A9+%23%3F", url(&buf, .suggest, "café #?"));
+    try std.testing.expectEqualStrings("https://grok.com/?q=liquid+glass+%26+UI", url(&buf, .ask_grok, " liquid glass & UI "));
 }

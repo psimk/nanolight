@@ -45,7 +45,7 @@ const footer_h = 38;
 const list_pad = 6;
 /// The room a window leaves round the panel for its shadow (`Nanolight.margin`).
 pub const shadow_margin: f32 = 40;
-/// The tallest the panel gets: every app row, the three web rows and
+/// The tallest the panel gets: every app row, both web rows and
 /// DuckDuckGo's completions, under three section heads (math lists fewer), or
 /// a search's page. The window is this tall.
 pub const max_height: f32 = header_h + footer_h + 2 + list_pad * 2 + results.max_rows * row_h + 3 * section_h;
@@ -400,16 +400,14 @@ pub const Nanolight = struct {
                 const w = s.web.get(r.web);
                 ui.richText(c, w, s.added(i, w, p), .{ .size = 13.5, .color = p.text.alpha(0.72), .truncate = .ellipsis });
             },
-            .ask_grok, .search_x, .search_web => {
+            .ask_grok, .search_web => {
                 const verb = switch (r.kind) {
                     .ask_grok => "Ask Grok",
-                    .search_x => "Search X for",
                     else => "Search DuckDuckGo for",
                 };
                 ui.textf(c, .{ .size = 13.5, .weight = .medium, .color = p.text, .truncate = .ellipsis }, "{s} “{s}”", .{ verb, std.mem.trim(u8, q, " ") });
                 ui.text(c, switch (r.kind) {
                     .ask_grok => "grok.com",
-                    .search_x => "x.com · Latest",
                     else => "duckduckgo.com",
                 }, .{ .size = 12, .color = p.sub.alpha(0.8) });
             },
@@ -464,10 +462,6 @@ pub const Nanolight = struct {
         const side: f32 = if (big) 34 else 26;
         const box = ui.div(c).size(side, side).rounded(if (big) 9 else 7).bg(p.tile).center();
         defer box.end();
-        if (r.kind == .search_x) {
-            ui.text(c, "𝕏", .{ .size = 15, .weight = .bold, .color = p.text });
-            return;
-        }
         ui.icon(c, switch (r.kind) {
             .calc => "plus.forwardslash.minus",
             .ask_grok => "sparkles",
@@ -540,7 +534,7 @@ pub const Nanolight = struct {
                 s.index.opened(r.app, s.kv);
                 s.go(s.index.apps.items[r.app].path);
             },
-            .ask_grok, .search_x => s.go(results.url(&s.url_buf, r.kind, s.query.text())),
+            .ask_grok => s.go(results.url(&s.url_buf, r.kind, s.query.text())),
             .search_web => s.search(s.query.text()),
             .suggest => {
                 // Its words fill the field, as a search box's would.

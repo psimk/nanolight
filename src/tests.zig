@@ -101,13 +101,14 @@ test "the panel finds, moves, answers and hands off" {
     press(&t, &.{.{ .command = .insert_newline }});
     try std.testing.expectEqualStrings("3072", t.clipboard.items);
 
-    // Anything else: DuckDuckGo, Grok, X.
+    // Anything else: DuckDuckGo and Grok.
     press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "liquid glass" } });
-    try std.testing.expect(t.containsText("Search X for"));
-    _ = t.shortcut(.{ .key = ui.Shortcut.down });
+    try std.testing.expect(t.containsText("Search DuckDuckGo for"));
+    try std.testing.expect(!t.containsText("Search X"));
+    try std.testing.expect(!t.containsText("Google"));
     _ = t.shortcut(.{ .key = ui.Shortcut.down });
     press(&t, &.{.{ .command = .insert_newline }});
-    try std.testing.expectEqualStrings("https://x.com/search?f=live&q=liquid+glass", probe.opened[0..probe.opened_len]);
+    try std.testing.expectEqualStrings("https://grok.com/?q=liquid+glass", probe.opened[0..probe.opened_len]);
 
     // Escape clears the query, then closes.
     probe.hidden = false;
@@ -180,8 +181,7 @@ test "DuckDuckGo's completions land below, and a search shows in the panel" {
     // above it, a key under the search.
     try std.testing.expectEqual(results.Kind.search_web, s.res.rows[s.sel].kind);
     _ = t.shortcut(.{ .key = ui.Shortcut.down });
-    _ = t.shortcut(.{ .key = ui.Shortcut.down });
-    try std.testing.expectEqual(results.Kind.search_x, s.res.rows[s.sel].kind);
+    try std.testing.expectEqual(results.Kind.ask_grok, s.res.rows[s.sel].kind);
     var said: suggest.List = .{};
     for ([_][]const u8{ "liquid glass", "liquid glass apple" }) |w| said.push(w);
     s.answered("liquid gl", &said);
@@ -189,7 +189,7 @@ test "DuckDuckGo's completions land below, and a search shows in the panel" {
     try std.testing.expect(t.hasText("DuckDuckGo"));
     try std.testing.expect(t.hasText("liquid glass apple"));
     try std.testing.expectEqual(results.Kind.suggest, s.res.rows[1].kind);
-    try std.testing.expectEqual(results.Kind.search_x, s.res.rows[s.sel].kind);
+    try std.testing.expectEqual(results.Kind.ask_grok, s.res.rows[s.sel].kind);
     // The first completion shows faintly in the field; Tab takes it.
     try std.testing.expect(t.hasText("ass"));
     try std.testing.expect(t.shortcut(.{ .key = ui.Shortcut.tab }));
