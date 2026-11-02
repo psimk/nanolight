@@ -20,7 +20,7 @@ pub const Host = struct {
     hide: *const fn (ctx: *anyopaque) void,
     /// The panel's height changed: a window follows it.
     resize: ?*const fn (ctx: *anyopaque, h: f32) void = null,
-    /// Google's completions of a query aren't known: ask for them, and
+    /// DuckDuckGo's completions of a query aren't known: ask for them, and
     /// answer with `Nanolight.answered`. Without it, none are listed.
     suggest: ?*const fn (ctx: *anyopaque, query: []const u8) void = null,
     /// Shows a search's page in the panel, over `webArea`; null takes it
@@ -46,7 +46,7 @@ const list_pad = 6;
 /// The room a window leaves round the panel for its shadow (`Nanolight.margin`).
 pub const shadow_margin: f32 = 40;
 /// The tallest the panel gets: every app row, the three web rows and
-/// Google's completions, under three section heads (math lists fewer), or
+/// DuckDuckGo's completions, under three section heads (math lists fewer), or
 /// a search's page. The window is this tall.
 pub const max_height: f32 = header_h + footer_h + 2 + list_pad * 2 + results.max_rows * row_h + 3 * section_h;
 
@@ -107,7 +107,7 @@ pub const Nanolight = struct {
     note: []const u8 = "",
     /// The first-run welcome, drawn in the panel while it is active.
     onboard: ?*@import("onboard.zig").Onboard = null,
-    /// Google's completions: whether to ask for them, those listed, and
+    /// DuckDuckGo's completions: whether to ask for them, those listed, and
     /// the answers so far.
     suggest_on: bool = true,
     web: suggest.List = .{},
@@ -190,7 +190,7 @@ pub const Nanolight = struct {
                 ui.div(c).wFull().h(1).bg(p.hair).end();
                 const wait = ui.div(c).wFull().h(webArea(h).h).center();
                 defer wait.end();
-                ui.text(c, "Searching Google…", .{ .size = 13, .color = p.sub.alpha(0.8) });
+                ui.text(c, "Searching DuckDuckGo…", .{ .size = 13, .color = p.sub.alpha(0.8) });
             } else if (s.res.n > 0) {
                 ui.div(c).wFull().h(1).bg(p.hair).end();
                 s.list(c, p);
@@ -259,7 +259,7 @@ pub const Nanolight = struct {
 
     /// What the query is the start of, drawn faintly after the caret; →
     /// or Tab takes it. The top app's name when one is listed first ("saf"
-    /// → "ari"), else Google's first completion that goes on from the
+    /// → "ari"), else DuckDuckGo's first completion that goes on from the
     /// words ("liquid gl" → "ass"), so it is one key away, not a walk
     /// down the rows. Return never takes it: Return is the selected row.
     fn completion(s: *const Nanolight) []const u8 {
@@ -292,7 +292,7 @@ pub const Nanolight = struct {
     }
 
     /// The rows for the query, if it changed since they were built: with
-    /// what is known of Google's completions of it, asked for if not all.
+    /// what is known of DuckDuckGo's completions of it, asked for if not all.
     pub fn rebuild(s: *Nanolight) void {
         const q = s.query.text();
         const h = std.hash.Wyhash.hash(0, q);
@@ -315,7 +315,7 @@ pub const Nanolight = struct {
         s.res.build(s.query.text(), s.index.names.items, s.index.launches.items, sug[0..ns], s.web.slices(&web));
     }
 
-    /// Google's completions of `typed` (what `Host.suggest` asked): kept,
+    /// DuckDuckGo's completions of `typed` (what `Host.suggest` asked): kept,
     /// and listed if it is still what is typed. The selection stays on the
     /// row it was on, wherever that row now is: Return a moment after
     /// typing does what the panel showed, not a completion that just came.
@@ -404,13 +404,13 @@ pub const Nanolight = struct {
                 const verb = switch (r.kind) {
                     .ask_grok => "Ask Grok",
                     .search_x => "Search X for",
-                    else => "Search Google for",
+                    else => "Search DuckDuckGo for",
                 };
                 ui.textf(c, .{ .size = 13.5, .weight = .medium, .color = p.text, .truncate = .ellipsis }, "{s} “{s}”", .{ verb, std.mem.trim(u8, q, " ") });
                 ui.text(c, switch (r.kind) {
                     .ask_grok => "grok.com",
                     .search_x => "x.com · Latest",
-                    else => "google.com",
+                    else => "duckduckgo.com",
                 }, .{ .size = 12, .color = p.sub.alpha(0.8) });
             },
         }
@@ -561,7 +561,7 @@ pub const Nanolight = struct {
         }
     }
 
-    /// Google's page for `words`, in the panel if the host can show it.
+    /// DuckDuckGo's page for `words`, in the panel if the host can show it.
     fn search(s: *Nanolight, words: []const u8) void {
         const h = s.host orelse return;
         const u = results.url(&s.preview_buf, .search_web, words);

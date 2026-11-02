@@ -101,7 +101,7 @@ test "the panel finds, moves, answers and hands off" {
     press(&t, &.{.{ .command = .insert_newline }});
     try std.testing.expectEqualStrings("3072", t.clipboard.items);
 
-    // Anything else: Google, Grok, X.
+    // Anything else: DuckDuckGo, Grok, X.
     press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "liquid glass" } });
     try std.testing.expect(t.containsText("Search X for"));
     _ = t.shortcut(.{ .key = ui.Shortcut.down });
@@ -121,7 +121,7 @@ test "the panel finds, moves, answers and hands off" {
 const suggest = @import("suggest.zig");
 const results = @import("results.zig");
 
-/// A host that answers for Google and shows pages: what was asked, shown.
+/// A host that answers for DuckDuckGo and shows pages: what was asked, shown.
 const Web = struct {
     probe: Probe = .{},
     asked: [64]u8 = undefined,
@@ -156,7 +156,7 @@ const Web = struct {
     }
 };
 
-test "Google's completions land below, and a search shows in the panel" {
+test "DuckDuckGo's completions land below, and a search shows in the panel" {
     const gpa = std.testing.allocator;
     var ix: Index = .init(gpa);
     defer ix.deinit();
@@ -186,7 +186,7 @@ test "Google's completions land below, and a search shows in the panel" {
     for ([_][]const u8{ "liquid glass", "liquid glass apple" }) |w| said.push(w);
     s.answered("liquid gl", &said);
     t.settle(1);
-    try std.testing.expect(t.hasText("Google"));
+    try std.testing.expect(t.hasText("DuckDuckGo"));
     try std.testing.expect(t.hasText("liquid glass apple"));
     try std.testing.expectEqual(results.Kind.suggest, s.res.rows[1].kind);
     try std.testing.expectEqual(results.Kind.search_x, s.res.rows[s.sel].kind);
@@ -200,7 +200,7 @@ test "Google's completions land below, and a search shows in the panel" {
     // not a completion nobody picked.
     try std.testing.expectEqual(results.Kind.suggest, s.res.rows[1].kind);
     try std.testing.expectEqual(results.Kind.search_web, s.res.rows[s.sel].kind);
-    // ⌘2 is Google's first completion.
+    // ⌘2 is DuckDuckGo's first completion.
     try std.testing.expect(t.hasText("⌘2"));
     // One more letter: the answer so far stands in, and nothing is asked
     // again for words already answered.
@@ -212,11 +212,11 @@ test "Google's completions land below, and a search shows in the panel" {
     press(&t, &.{.{ .command = .delete_backward }});
     try std.testing.expectEqual(@as(usize, 0), web.asked_len);
 
-    // ⌘3, the second completion: its words in the field, Google's page in the panel.
+    // ⌘3, the second completion: its words in the field, DuckDuckGo's page in the panel.
     try std.testing.expect(t.shortcut(.{ .key = '3', .cmd = true }));
     t.settle(1);
     try std.testing.expectEqualStrings("liquid glass apple", s.query.text());
-    try std.testing.expectEqualStrings("https://www.google.com/search?q=liquid+glass+apple", web.page[0..web.page_len.?]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=liquid+glass+apple", web.page[0..web.page_len.?]);
     t.settle(2);
     try std.testing.expect(t.hasText("Open in Browser"));
     try std.testing.expectEqual(view.max_height, s.height());
@@ -226,20 +226,20 @@ test "Google's completions land below, and a search shows in the panel" {
     try std.testing.expect(web.page_len == null);
     try std.testing.expectEqualStrings("liquid glass apple", s.query.text());
 
-    // Return on words no app matches: Google's page; typing takes it away.
+    // Return on words no app matches: DuckDuckGo's page; typing takes it away.
     press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "pizza" } });
     press(&t, &.{.{ .command = .insert_newline }});
-    try std.testing.expectEqualStrings("https://www.google.com/search?q=pizza", web.page[0..web.page_len.?]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizza", web.page[0..web.page_len.?]);
     press(&t, &.{.{ .insert = "s" }});
     try std.testing.expect(web.page_len == null);
-    try std.testing.expect(t.hasText("Search Google for “pizzas”"));
+    try std.testing.expect(t.hasText("Search DuckDuckGo for “pizzas”"));
 
     // ⌘↩ in the page, and on the row: the browser, and the panel hides.
     while (s.res.rows[s.sel].kind != .search_web) _ = t.shortcut(.{ .key = ui.Shortcut.down });
     press(&t, &.{.{ .command = .insert_newline }});
     try std.testing.expect(web.page_len != null);
     try std.testing.expect(t.shortcut(.{ .key = ui.Shortcut.enter, .cmd = true }));
-    try std.testing.expectEqualStrings("https://www.google.com/search?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
     try std.testing.expect(web.probe.hidden);
     s.reveal();
     try std.testing.expect(web.page_len == null);
@@ -247,7 +247,7 @@ test "Google's completions land below, and a search shows in the panel" {
     t.settle(1);
     while (s.res.rows[s.sel].kind != .search_web) _ = t.shortcut(.{ .key = ui.Shortcut.down });
     try std.testing.expect(t.shortcut(.{ .key = ui.Shortcut.enter, .cmd = true }));
-    try std.testing.expectEqualStrings("https://www.google.com/search?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
+    try std.testing.expectEqualStrings("https://duckduckgo.com/?q=pizzas", web.probe.opened[0..web.probe.opened_len]);
 }
 
 const onboard = @import("onboard.zig");
@@ -369,7 +369,7 @@ test "the panel never outgrows its window, which is never resized" {
         tallest = @max(tallest, s.height());
     }
     try std.testing.expect(tallest <= view.max_height);
-    // "a" fills every app row there is, and Google's completions the
+    // "a" fills every app row there is, and DuckDuckGo's completions the
     // rest: the bound is the real one.
     s.query.set("a");
     s.rebuild();

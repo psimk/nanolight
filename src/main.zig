@@ -2,7 +2,7 @@
 //! ⌘Space, or the key picked in its welcome (onboard.zig), or from its
 //! menu bar icon; finds apps as you type (initials
 //! too: "ss" is System Settings), answers math, and hands anything else to
-//! Grok, X or Google, with Google's completions of it (suggest.zig) and its
+//! Grok, X or DuckDuckGo, with DuckDuckGo's completions of it (suggest.zig) and its
 //! results in the panel (preview.zig). Its panel is the system's vibrancy
 //! (NSVisualEffectView, as launchers use), nanoui drawing on it.
 //! It lives in the menu bar: no Dock icon, nothing drawn while idle.
@@ -51,7 +51,7 @@ const Live = struct {
     preview: Preview = .{},
     /// Clicks outside the panel go to what is under it (clickthrough.zig).
     through: ClickThrough = .{},
-    /// The words Google is to be asked about once typing pauses, and how
+    /// The words DuckDuckGo is to be asked about once typing pauses, and how
     /// many pauses are still being waited out (only the last one asks).
     asking: [suggest.max_len]u8 = undefined,
     asking_len: usize = 0,
@@ -168,7 +168,7 @@ const Live = struct {
         };
     }
 
-    /// Google is asked once typing pauses (`suggest.pause_ms`).
+    /// DuckDuckGo is asked once typing pauses (`suggest.pause_ms`).
     fn ask(ctx: *anyopaque, query: []const u8) void {
         const l: *Live = @ptrCast(@alignCast(ctx));
         const q = std.mem.trim(u8, query, " ");
@@ -239,7 +239,7 @@ const Live = struct {
         t.setMenu("Nanolight", &.{
             .{ .label = "Open Nanolight", .click = .of(l, Live.menuShow) },
             .{ .label = "Welcome…", .click = .of(l, Live.welcome) },
-            .{ .label = "Google Suggestions", .kind = .checkbox, .checked = l.s.suggest_on, .click = .of(l, Live.toggleSuggest) },
+            .{ .label = "DuckDuckGo Suggestions", .kind = .checkbox, .checked = l.s.suggest_on, .click = .of(l, Live.toggleSuggest) },
             .separator,
             acc[0],
             acc[1],
@@ -400,7 +400,7 @@ const Live = struct {
     }
 };
 
-/// A question to Google on its way: the words it is about.
+/// A question to DuckDuckGo on its way: the words it is about.
 const Ask = struct {
     live: *Live,
     text: [suggest.max_len]u8 = undefined,
@@ -469,7 +469,7 @@ pub fn main(init: std.process.Init) !void {
     defer s.query.deinit();
     var live: Live = .{ .app = app, .s = &s, .o = &o, .kv = kv, .choice = shortcut.load(kv, init.gpa) };
     s.host = live.host();
-    // Google's completions are on unless turned off from the menu bar.
+    // DuckDuckGo's completions are on unless turned off from the menu bar.
     if (kv.get(init.gpa, suggest_key) catch null) |v| {
         defer init.gpa.free(v);
         s.suggest_on = !std.mem.eql(u8, v, "0");

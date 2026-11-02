@@ -1,5 +1,5 @@
 //! What Nanolight syncs between a person's Macs, as one record: the key
-//! that opens it, whether Google's suggestions are on, and how often each
+//! that opens it, whether DuckDuckGo's suggestions are on, and how often each
 //! app was opened (what an empty panel suggests). JSON, so the server keeps
 //! it as it came (the gateway's /v1/sync, collection `nanolight`).
 //!

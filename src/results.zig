@@ -1,6 +1,6 @@
 //! What the panel lists for a query, in order: the answer when it is math,
-//! the apps that match it (or, with no query, suggestions), then Google:
-//! a search for exactly what is typed, first, and Google's completions of
+//! the apps that match it (or, with no query, suggestions), then DuckDuckGo:
+//! a search for exactly what is typed, first, and DuckDuckGo's completions of
 //! it under that, a key or two away; last, the query asked of Grok or
 //! searched on X. With no app or answer, Return searches what was typed
 //! (as an address bar's does). Completions land a moment after the rest;
@@ -15,7 +15,7 @@ pub const Kind = enum {
     ask_grok,
     search_x,
     search_web,
-    /// One of Google's completions (`Row.web`).
+    /// One of DuckDuckGo's completions (`Row.web`).
     suggest,
 
     /// The row's kind as its trailing label shows it.
@@ -34,7 +34,7 @@ pub const Kind = enum {
             .app => "Open Application",
             .ask_grok => "Ask Grok",
             .search_x => "Search X",
-            .search_web, .suggest => "Search Google",
+            .search_web, .suggest => "Search DuckDuckGo",
         };
     }
 
@@ -42,7 +42,7 @@ pub const Kind = enum {
         return switch (k) {
             .calc => "Calculator",
             .app => if (suggested) "Suggestions" else "Applications",
-            .search_web, .suggest => "Google",
+            .search_web, .suggest => "DuckDuckGo",
             .ask_grok, .search_x => "Ask & Search",
         };
     }
@@ -59,11 +59,11 @@ pub const Row = struct {
 };
 
 pub const max_apps = 6;
-/// Google's completions fill what room is left, up to four.
+/// DuckDuckGo's completions fill what room is left, up to four.
 pub const max_web = 4;
 /// Every app and the three web rows leave room for three completions.
 pub const max_rows = max_apps + 3 + 3;
-/// The web rows that always follow the apps: Google, Grok, X.
+/// The web rows that always follow the apps: DuckDuckGo, Grok, X.
 const handoffs = 3;
 
 pub const Results = struct {
@@ -83,7 +83,7 @@ pub const Results = struct {
     }
 
     /// Lists what `query` finds among `names` (with how often each was
-    /// opened, `boost`) and Google's completions of it (`web`), or
+    /// opened, `boost`) and DuckDuckGo's completions of it (`web`), or
     /// `suggestions` when the query is empty.
     pub fn build(r: *Results, query_in: []const u8, names: []const []const u8, boost: []const u16, suggestions: []const u32, web: []const []const u8) void {
         r.n = 0;
@@ -134,7 +134,7 @@ pub fn url(buf: []u8, kind: Kind, query: []const u8) []const u8 {
     const base = switch (kind) {
         .ask_grok => "https://grok.com/?q=",
         .search_x => "https://x.com/search?f=live&q=",
-        .search_web, .suggest => "https://www.google.com/search?q=",
+        .search_web, .suggest => "https://duckduckgo.com/?q=",
         .calc, .app => return "",
     };
     var w: std.Io.Writer = .fixed(buf);
@@ -164,7 +164,7 @@ test "math first, then apps; ask and search only without an answer" {
     try t.expectEqual(@as(u32, 0), r.rows[0].app);
     try t.expectEqual(Kind.search_web, r.rows[r.n - 3].kind);
     try t.expectEqualStrings("Applications", r.section(0).?);
-    try t.expectEqualStrings("Google", r.section(1).?);
+    try t.expectEqualStrings("DuckDuckGo", r.section(1).?);
     try t.expectEqualStrings("Ask & Search", r.section(2).?);
     try t.expect(r.section(3) == null);
     r.build("2^10 * 3", &names, &.{}, &.{}, &.{"ignored"});
@@ -179,7 +179,7 @@ test "math first, then apps; ask and search only without an answer" {
     try t.expectEqual(@as(usize, 3), r.n);
     // No app: the search for what was typed comes first.
     try t.expectEqual(Kind.search_web, r.rows[0].kind);
-    try t.expectEqualStrings("Google", r.section(0).?);
+    try t.expectEqualStrings("DuckDuckGo", r.section(0).?);
     try t.expectEqualStrings("Ask & Search", r.section(1).?);
     // Completions under it, in the same section, then Grok and X.
     r.build("liquid gl", &names, &.{}, &.{}, &.{ "liquid glass", "liquid glue" });

@@ -1,7 +1,5 @@
-//! Google's completions for what is typed, got as browse
-//! (github.com/justrach/browse, GoogleSuggestions.swift) gets them: the
-//! endpoint Firefox uses, no cookies kept, a short answer or none. Google
-//! doesn't publish it as an API, so a failure only leaves the other rows.
+//! DuckDuckGo's completions for what is typed, with no cookies kept.
+//! A failure only leaves the other rows.
 //!
 //! Nothing that reads as an address goes out (a dot, a slash, a colon, an
 //! @: a URL, a host, an email), and an answer counts only for the words it
@@ -21,7 +19,7 @@ pub const max_bytes = 32 * 1024;
 /// to pass, short enough to land while the words are still being read.
 pub const pause_ms = 90;
 
-/// Whether `typed` may be sent to Google at all.
+/// Whether `typed` may be sent to DuckDuckGo at all.
 pub fn eligible(typed: []const u8) bool {
     const t = std.mem.trim(u8, typed, " \t\r\n");
     if (t.len < 2 or t.len > max_len) return false;
@@ -36,7 +34,7 @@ pub fn eligible(typed: []const u8) bool {
 /// The address that asks for `typed`'s completions.
 pub fn url(buf: []u8, typed: []const u8) []const u8 {
     var w: std.Io.Writer = .fixed(buf);
-    w.writeAll("https://suggestqueries.google.com/complete/search?client=firefox&q=") catch return "";
+    w.writeAll("https://duckduckgo.com/ac/?type=list&q=") catch return "";
     results.escape(&w, typed);
     return w.buffered();
 }
@@ -100,7 +98,7 @@ pub const List = struct {
     }
 };
 
-/// Google's answer (`["typed", ["completion", …], …]`) as completions of
+/// DuckDuckGo's answer (`["typed", ["completion", …], …]`) as completions of
 /// `typed` into `out`: false when it isn't one, or answers other words.
 /// The words typed themselves, repeats, and long ones are left out.
 pub fn decode(arena: std.mem.Allocator, body: []const u8, typed: []const u8, out: *List) bool {
@@ -150,7 +148,7 @@ pub const Cache = struct {
         return null;
     }
 
-    /// What to show for `typed` now, into `out`: Google's answer to it
+    /// What to show for `typed` now, into `out`: DuckDuckGo's answer to it
     /// (true: there is no need to ask), or its answer to fewer of the
     /// letters, kept to what still begins with them (false).
     pub fn lookup(c: *const Cache, typed: []const u8, out: *List) bool {
@@ -191,14 +189,14 @@ test "addresses, emails and paths never go out" {
 
 test "the address is escaped" {
     var buf: [256]u8 = undefined;
-    try std.testing.expectEqualStrings("https://suggestqueries.google.com/complete/search?client=firefox&q=liquid+gl+%26+co", url(&buf, " liquid gl & co "));
+    try std.testing.expectEqualStrings("https://duckduckgo.com/ac/?type=list&q=liquid+gl+%26+co", url(&buf, " liquid gl & co "));
 }
 
 test "an answer counts only for the words it answers" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     const body =
-        \\["liquid gl",["liquid glass","Liquid  Gl","liquid glass","liquid glue","liquid glass apple","liquid glass ui","liquid glucose"],[],{"google:suggestsubtypes":[[512]]}]
+        \\["liquid gl",["liquid glass","Liquid  Gl","liquid glass","liquid glue","liquid glass apple","liquid glass ui","liquid glucose"]]
     ;
     var l: List = .{};
     try std.testing.expect(decode(arena.allocator(), body, "Liquid  GL", &l));
