@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
     }) });
     // Its hot key (⌘Space from any app, or the key its welcome picks) is Carbon's.
     exe.root_module.linkFramework("Carbon", .{});
+    exe.root_module.linkFramework("ApplicationServices", .{});
     // Opening at login, from its welcome (SMAppService).
     exe.root_module.linkFramework("ServiceManagement", .{});
     // The Codegraff key, kept in the Keychain (src/keychain.zig).
