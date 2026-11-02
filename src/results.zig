@@ -8,10 +8,12 @@
 const std = @import("std");
 const search = @import("search.zig");
 const calc = @import("calc.zig");
+const window_layout = @import("window_layout.zig");
 
 pub const Kind = enum {
     calc,
     app,
+    window,
     ask_grok,
     search_web,
     /// One of DuckDuckGo's completions (`Row.web`).
@@ -22,6 +24,7 @@ pub const Kind = enum {
         return switch (k) {
             .calc => "Calculator",
             .app => "Application",
+            .window => "Window Management",
             .ask_grok, .search_web, .suggest => "Web",
         };
     }
@@ -31,6 +34,7 @@ pub const Kind = enum {
         return switch (k) {
             .calc => "Copy Answer",
             .app => "Open Application",
+            .window => "Arrange Window",
             .ask_grok => "Ask Grok",
             .search_web, .suggest => "Search DuckDuckGo",
         };
@@ -40,6 +44,7 @@ pub const Kind = enum {
         return switch (k) {
             .calc => "Calculator",
             .app => if (suggested) "Suggestions" else "Applications",
+            .window => "Window Management",
             .search_web, .suggest => "DuckDuckGo",
             .ask_grok => "Grok",
         };
@@ -50,6 +55,7 @@ pub const Row = struct {
     kind: Kind,
     /// The app's index (`.app`).
     app: u32 = 0,
+    window: window_layout.Action = .left_half,
     /// Which of the completions (`.suggest`).
     web: u8 = 0,
     /// Which of its name's bytes the query matched.
@@ -101,13 +107,21 @@ pub const Results = struct {
         }
         var ranked: [max_apps]search.Ranked = undefined;
         const n = search.rank(query, names, boost, &ranked);
-        for (ranked[0..n]) |x| r.push(.{ .kind = .app, .app = x.index, .match = x.match });
-        if (r.n > 0 and r.rows[0].kind == .calc) return;
+        if (r.n > 0 and r.rows[0].kind == .calc) {
+            for (ranked[0..n]) |x| r.push(.{ .kind = .app, .app = x.index, .match = x.match });
+            return;
+        }
+        var commands: [max_apps]search.Ranked = undefined;
+        const nc = window_layout.rank(query, &commands);
+        const commands_first = nc > 0 and (n == 0 or commands[0].match.score > ranked[0].match.score);
+        if (commands_first) for (commands[0..nc]) |x| r.push(.{ .kind = .window, .window = window_layout.Action.all[x.index], .match = x.match });
+        for (ranked[0..@min(n, max_apps - r.n)]) |x| r.push(.{ .kind = .app, .app = x.index, .match = x.match });
+        if (!commands_first) for (commands[0..@min(nc, max_apps - r.n)]) |x| r.push(.{ .kind = .window, .window = window_layout.Action.all[x.index], .match = x.match });
         // The search for what was typed, its completions (as many as leave
         // room for the rest), then Grok.
         const room = max_rows - r.n - handoffs;
         r.push(.{ .kind = .search_web });
-        for (0..@min(web.len, max_web, room)) |i| r.push(.{ .kind = .suggest, .web = @intCast(i) });
+        for (0..@min(if (nc > 0) 0 else web.len, max_web, room)) |i| r.push(.{ .kind = .suggest, .web = @intCast(i) });
         r.push(.{ .kind = .ask_grok });
     }
 
@@ -131,7 +145,7 @@ pub fn url(buf: []u8, kind: Kind, query: []const u8) []const u8 {
     const base = switch (kind) {
         .ask_grok => "https://grok.com/?q=",
         .search_web, .suggest => "https://duckduckgo.com/?q=",
-        .calc, .app => return "",
+        .calc, .app, .window => return "",
     };
     var w: std.Io.Writer = .fixed(buf);
     w.writeAll(base) catch return "";
@@ -202,4 +216,25 @@ test "queries are escaped into the address" {
     try std.testing.expectEqualStrings("https://duckduckgo.com/?q=liquid+glass+%26+UI", url(&buf, .search_web, " liquid glass & UI "));
     try std.testing.expectEqualStrings("https://duckduckgo.com/?q=caf%C3%A9+%23%3F", url(&buf, .suggest, "café #?"));
     try std.testing.expectEqualStrings("https://grok.com/?q=liquid+glass+%26+UI", url(&buf, .ask_grok, " liquid glass & UI "));
+}
+
+test "window commands share the local result limit and preserve app ranking" {
+    const t = std.testing;
+    var r: Results = .{};
+    r.build("left half", &.{"Left Helper"}, &.{}, &.{}, &.{"left half search"});
+    try t.expectEqual(Kind.window, r.rows[0].kind);
+    try t.expectEqual(window_layout.Action.left_half, r.rows[0].window);
+    try t.expectEqualStrings("Window Management", r.section(0).?);
+    for (r.slice()) |row| try t.expect(row.kind != .suggest);
+    r.build("Center", &.{"Center"}, &.{}, &.{}, &.{});
+    try t.expectEqual(Kind.app, r.rows[0].kind);
+    try t.expectEqual(Kind.window, r.rows[1].kind);
+    try t.expectEqual(window_layout.Action.center, r.rows[1].window);
+    const names = [_][]const u8{ "Left Helper 1", "Left Helper 2", "Left Helper 3", "Left Helper 4", "Left Helper 5", "Left Helper 6" };
+    r.build("left", &names, &.{}, &.{}, &.{ "left 1", "left 2", "left 3", "left 4" });
+    try t.expectEqual(@as(usize, max_apps + handoffs), r.n);
+    try t.expectEqual(Kind.window, r.rows[0].kind);
+    try t.expectEqual(Kind.app, r.rows[3].kind);
+    try t.expectEqual(Kind.search_web, r.rows[max_apps].kind);
+    try t.expectEqual(Kind.ask_grok, r.rows[r.n - 1].kind);
 }

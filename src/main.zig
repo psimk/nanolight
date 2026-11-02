@@ -24,6 +24,8 @@ const single = @import("single.zig");
 const ClickThrough = @import("clickthrough.zig").ClickThrough;
 const account = @import("account.zig");
 const Settings = @import("settings.zig").Settings;
+const window_layout = @import("window_layout.zig");
+const WindowManager = @import("window_control.zig").Manager;
 
 const suggest_key = "nanolight.suggest";
 /// The version an automatic update restarted into, for the new copy to say.
@@ -44,6 +46,7 @@ const Live = struct {
     o: *Onboard,
     kv: nanoui.kv.Store,
     choice: shortcut.Choice = .cmd_space,
+    windows: WindowManager = .{},
     window: ?*nanoui.Window = null,
     /// The system's glass under the panel, which the window's views keep.
     glass: ?objc.Object = null,
@@ -65,7 +68,16 @@ const Live = struct {
     account_label: [192]u8 = undefined,
 
     fn host(l: *Live) view.Host {
-        return .{ .ctx = l, .open = open, .hide = hide, .resize = resize, .suggest = ask };
+        return .{ .ctx = l, .open = open, .hide = hide, .resize = resize, .suggest = ask, .arrange = arrange, .accessibility = accessibility };
+    }
+
+    fn arrange(ctx: *anyopaque, action: window_layout.Action) window_layout.Failure!void {
+        const l: *Live = @ptrCast(@alignCast(ctx));
+        try l.windows.run(action);
+    }
+
+    fn accessibility(_: *anyopaque) void {
+        _ = nanoui.shell.openUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility");
     }
 
     fn open(ctx: *anyopaque, target: []const u8) void {
@@ -296,6 +308,7 @@ const Live = struct {
         const showing = w.isVisible() and w.isFocused();
         l.o.pressed(showing);
         if (showing) return w.hide();
+        l.windows.capture();
         // Freed a key in System Settings, quit a launcher: look again.
         if (l.o.active) l.o.refresh();
         // A fifth of the way down the main screen, centered.
@@ -444,6 +457,7 @@ pub fn main(init: std.process.Init) !void {
     var s: Nanolight = .{ .index = &index, .kv = kv, .onboard = &o };
     defer s.query.deinit();
     var live: Live = .{ .app = app, .s = &s, .o = &o, .kv = kv, .choice = shortcut.load(kv, init.gpa) };
+    defer live.windows.deinit();
     s.host = live.host();
     // DuckDuckGo's completions are on unless turned off from the menu bar.
     if (kv.get(init.gpa, suggest_key) catch null) |v| {

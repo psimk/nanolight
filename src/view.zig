@@ -10,6 +10,7 @@ const motion = ui.motion;
 const Index = @import("apps.zig").Index;
 const results = @import("results.zig");
 const suggest = @import("suggest.zig");
+const window_layout = @import("window_layout.zig");
 const Row = results.Row;
 
 /// What the panel asks of whatever shows it (the window, or the film).
@@ -23,6 +24,8 @@ pub const Host = struct {
     /// DuckDuckGo's completions of a query aren't known: ask for them, and
     /// answer with `Nanolight.answered`. Without it, none are listed.
     suggest: ?*const fn (ctx: *anyopaque, query: []const u8) void = null,
+    arrange: ?*const fn (ctx: *anyopaque, action: window_layout.Action) window_layout.Failure!void = null,
+    accessibility: ?*const fn (ctx: *anyopaque) void = null,
     /// Shows a search's page in the promo, over `webArea`; null takes it
     /// away. The app leaves this unset so searches open in the browser.
     preview: ?*const fn (ctx: *anyopaque, url: ?[]const u8) void = null,
@@ -43,6 +46,7 @@ const calc_h = 92;
 const section_h = 28;
 const footer_h = 38;
 const list_pad = 6;
+const status_h = 62;
 /// The room a window leaves round the panel for its shadow (`Nanolight.margin`).
 pub const shadow_margin: f32 = 40;
 /// The tallest the panel gets: every app row, both web rows and
@@ -105,6 +109,7 @@ pub const Nanolight = struct {
     revealed: u64 = 0,
     /// Said in the footer in place of the name ("Updated to 0.1.3"), if set.
     note: []const u8 = "",
+    failure: ?window_layout.Failure = null,
     /// The first-run welcome, drawn in the panel while it is active.
     onboard: ?*@import("onboard.zig").Onboard = null,
     /// DuckDuckGo's completions: whether to ask for them, those listed, and
@@ -121,6 +126,7 @@ pub const Nanolight = struct {
     /// Called as it is shown: the query selected, the keys its own.
     pub fn reveal(s: *Nanolight) void {
         s.back();
+        s.failure = null;
         s.shown +%= 1;
         // Suggestions follow what was opened since.
         s.built = 1;
@@ -132,7 +138,7 @@ pub const Nanolight = struct {
     /// The panel's height for the rows it lists.
     pub fn height(s: *const Nanolight) f32 {
         if (s.previewing) return max_height;
-        var h: f32 = header_h + footer_h + 1;
+        var h: f32 = header_h + footer_h + 1 + @as(f32, if (s.failure != null) status_h else 0);
         if (s.res.n == 0) return h;
         h += 1 + list_pad * 2;
         for (s.res.slice(), 0..) |r, i| {
@@ -185,6 +191,7 @@ pub const Nanolight = struct {
         {
             const body = ui.div(c).column().wFull().h(h - header_h).clip();
             defer body.end();
+            if (s.failure) |failure| s.status(c, p, failure);
             if (s.previewing) {
                 // Under the page, until it draws.
                 ui.div(c).wFull().h(1).bg(p.hair).end();
@@ -198,6 +205,20 @@ pub const Nanolight = struct {
             ui.spacer(c);
             s.footer(c, p);
         }
+    }
+
+    fn status(s: *Nanolight, c: *ui.Context, p: Palette, failure: window_layout.Failure) void {
+        const box = ui.div(c).row().wFull().h(status_h).px(18).gap(12).itemsCenter().bg(p.tile);
+        defer box.end();
+        const text = ui.div(c).column().grow();
+        ui.text(c, window_layout.message(failure), .{ .size = 12.5, .color = p.text, .wrap = true });
+        text.end();
+        if (failure == error.AccessibilityRequired) if (s.host) |host| if (host.accessibility) |open| {
+            const button = ui.div(c).row().h(28).px(12).itemsCenter().rounded(7).bg(p.sel).border(p.rim).control();
+            defer button.end();
+            if (button.clicked()) open(host.ctx);
+            ui.text(c, "Open Settings", .{ .size = 12, .weight = .semibold, .color = p.text });
+        };
     }
 
     /// The panel's height, springing to `target`; a window follows it.
@@ -298,8 +319,11 @@ pub const Nanolight = struct {
         const h = std.hash.Wyhash.hash(0, q);
         if (h == s.built) return;
         s.built = h;
+        s.failure = null;
         s.web.n = 0;
-        if (s.host) |host| if (host.suggest) |ask| if (s.suggest_on and suggest.eligible(q) and @import("calc.zig").eval(q) == null) {
+        var commands: [results.max_apps]@import("search.zig").Ranked = undefined;
+        const is_command = window_layout.rank(q, &commands) > 0;
+        if (s.host) |host| if (host.suggest) |ask| if (!is_command and s.suggest_on and suggest.eligible(q) and @import("calc.zig").eval(q) == null) {
             if (!s.cache.lookup(q, &s.web)) ask(host.ctx, q);
         };
         s.fill();
@@ -337,6 +361,7 @@ pub const Nanolight = struct {
         for (s.res.slice(), 0..) |now, i| {
             const same_row = now.kind == r.kind and switch (r.kind) {
                 .app => now.app == r.app,
+                .window => now.window == r.window,
                 .suggest => suggest.same(s.web.get(now.web), was_text[0..was_len]),
                 else => true,
             };
@@ -395,6 +420,10 @@ pub const Nanolight = struct {
                 const a = s.index.apps.items[r.app];
                 ui.richText(c, a.name, s.highlight(i, r, p), .{ .size = 13.5, .weight = .medium, .color = p.text.alpha(0.82) });
                 ui.text(c, a.folder, .{ .size = 12, .color = p.sub.alpha(0.8) });
+            },
+            .window => {
+                ui.text(c, r.window.label(), .{ .size = 13.5, .weight = .medium, .color = p.text });
+                ui.text(c, "Focused window", .{ .size = 12, .color = p.sub.alpha(0.8) });
             },
             .suggest => {
                 const w = s.web.get(r.web);
@@ -465,6 +494,7 @@ pub const Nanolight = struct {
         ui.icon(c, switch (r.kind) {
             .calc => "plus.forwardslash.minus",
             .ask_grok => "sparkles",
+            .window => "macwindow",
             .search_web => "globe",
             .suggest => "magnifyingglass",
             else => "app.dashed",
@@ -533,6 +563,21 @@ pub const Nanolight = struct {
             .app => {
                 s.index.opened(r.app, s.kv);
                 s.go(s.index.apps.items[r.app].path);
+            },
+            .window => {
+                const host = s.host orelse return;
+                const arrange = host.arrange orelse {
+                    s.failure = error.CommandUnavailable;
+                    c.changed = true;
+                    return;
+                };
+                arrange(host.ctx, r.window) catch |failure| {
+                    s.failure = failure;
+                    c.changed = true;
+                    return;
+                };
+                s.failure = null;
+                host.hide(host.ctx);
             },
             .ask_grok => s.go(results.url(&s.url_buf, r.kind, s.query.text())),
             .search_web => s.search(s.query.text()),

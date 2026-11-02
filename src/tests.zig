@@ -5,6 +5,7 @@ const nanoui = @import("nanoui");
 const ui = nanoui.ui;
 const Index = @import("apps.zig").Index;
 const view = @import("view.zig");
+const window_layout = @import("window_layout.zig");
 
 test {
     _ = @import("search.zig");
@@ -361,4 +362,116 @@ test "the panel never outgrows its window, which is never resized" {
         o.step = step;
         try std.testing.expect(o.height() <= view.max_height);
     }
+}
+
+const WindowProbe = struct {
+    action: ?window_layout.Action = null,
+    failure: ?window_layout.Failure = null,
+    hidden: bool = false,
+    opened: bool = false,
+    asked: bool = false,
+    settings_opened: bool = false,
+
+    fn host(probe: *WindowProbe) view.Host {
+        return .{ .ctx = probe, .open = open, .hide = hide, .suggest = ask, .arrange = arrange, .accessibility = settings };
+    }
+
+    fn open(ctx: *anyopaque, _: []const u8) void {
+        const probe: *WindowProbe = @ptrCast(@alignCast(ctx));
+        probe.opened = true;
+    }
+
+    fn hide(ctx: *anyopaque) void {
+        const probe: *WindowProbe = @ptrCast(@alignCast(ctx));
+        probe.hidden = true;
+    }
+
+    fn ask(ctx: *anyopaque, _: []const u8) void {
+        const probe: *WindowProbe = @ptrCast(@alignCast(ctx));
+        probe.asked = true;
+    }
+
+    fn arrange(ctx: *anyopaque, action: window_layout.Action) window_layout.Failure!void {
+        const probe: *WindowProbe = @ptrCast(@alignCast(ctx));
+        probe.action = action;
+        if (probe.failure) |failure| return failure;
+    }
+
+    fn settings(ctx: *anyopaque) void {
+        const probe: *WindowProbe = @ptrCast(@alignCast(ctx));
+        probe.settings_opened = true;
+    }
+};
+
+test "window commands run from the launcher without opening apps or sending queries" {
+    const gpa = std.testing.allocator;
+    var ix: Index = .init(gpa);
+    defer ix.deinit();
+    var probe: WindowProbe = .{};
+    var s: view.Nanolight = .{ .index = &ix, .host = probe.host() };
+    defer s.query.deinit();
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&s, view.Nanolight.view), .{ .width = view.width, .height = view.max_height, .dark = true });
+    defer t.deinit();
+    for (window_layout.Action.all) |action| {
+        probe = .{};
+        s.reveal();
+        press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = action.label() } });
+        try std.testing.expect(t.hasText("Window Management"));
+        try std.testing.expect(t.hasText(action.label()));
+        try std.testing.expectEqual(results.Kind.window, s.res.rows[0].kind);
+        try std.testing.expectEqual(action, s.res.rows[0].window);
+        try std.testing.expect(s.height() <= view.max_height);
+        press(&t, &.{.{ .command = .insert_newline }});
+        try std.testing.expectEqual(action, probe.action.?);
+        try std.testing.expect(probe.hidden);
+        try std.testing.expect(!probe.opened and !probe.asked);
+    }
+    probe = .{};
+    s.reveal();
+    press(&t, &.{ .{ .command = .select_all }, .{ .command = .delete_backward }, .{ .insert = "window" } });
+    try std.testing.expect(t.shortcut(.{ .key = '2', .cmd = true }));
+    try std.testing.expectEqual(window_layout.Action.right_half, probe.action.?);
+    try std.testing.expect(probe.hidden and !probe.opened and !probe.asked);
+}
+
+test "window failures explain how to retry and keep the launcher open" {
+    const gpa = std.testing.allocator;
+    var ix: Index = .init(gpa);
+    defer ix.deinit();
+    for (0..6) |i| {
+        var name: [32]u8 = undefined;
+        var path: [64]u8 = undefined;
+        try ix.add(try std.fmt.bufPrint(&name, "Left Helper {d}", .{i}), try std.fmt.bufPrint(&path, "/Applications/Left Helper {d}.app", .{i}));
+    }
+    var probe: WindowProbe = .{ .failure = error.AccessibilityRequired };
+    var s: view.Nanolight = .{ .index = &ix, .host = probe.host() };
+    defer s.query.deinit();
+    s.reveal();
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&s, view.Nanolight.view), .{ .width = view.width, .height = view.max_height, .dark = true });
+    defer t.deinit();
+    press(&t, &.{.{ .insert = "left" }});
+    press(&t, &.{.{ .command = .insert_newline }});
+    try std.testing.expect(t.hasText(window_layout.message(error.AccessibilityRequired)));
+    try std.testing.expect(t.hasText("Open Settings"));
+    try t.clickText("Open Settings");
+    try std.testing.expect(probe.settings_opened);
+    s.query.focus();
+    t.settle(1);
+    try std.testing.expect(!probe.hidden and !probe.opened and !probe.asked);
+    try std.testing.expect(s.height() <= view.max_height);
+    for ([_]window_layout.Failure{ error.NoWindow, error.CannotResize, error.FullscreenWindow, error.NothingToRestore, error.OnlyOneDisplay }) |failure| {
+        probe.failure = failure;
+        press(&t, &.{.{ .command = .insert_newline }});
+        try std.testing.expectEqual(failure, s.failure.?);
+        try std.testing.expect(t.hasText(window_layout.message(failure)));
+        try std.testing.expect(!t.hasText("Open Settings"));
+        try std.testing.expect(!probe.hidden and !probe.opened);
+    }
+    probe.failure = null;
+    press(&t, &.{.{ .command = .insert_newline }});
+    try std.testing.expect(probe.hidden);
+    try std.testing.expect(s.failure == null);
+    try std.testing.expectEqual(window_layout.Action.left_half, probe.action.?);
 }
