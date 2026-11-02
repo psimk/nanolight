@@ -2,7 +2,7 @@
 
 <h1 align="center">Nanolight</h1>
 <p align="center"><b>A ⌘Space launcher for the Mac, drawn by <a href="https://github.com/justrach/nanoui">nanoui</a>.</b><br>
-Apps, math, DuckDuckGo and Grok: one keystroke away. Native Zig, no Electron, about 1 MB.</p>
+Apps, math and DuckDuckGo: one keystroke away. Native Zig, no Electron, about 1 MB.</p>
 
 <p align="center"><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><img src="docs/promo-preview.gif" alt="Nanolight in 31 seconds: apps, initials, typos, math, Google suggestions and results in the panel, on a MacBook Air" width="760"></a><br><sub><a href="https://github.com/justrach/nanolight/raw/refs/heads/main/docs/promo.mp4"><b>Watch the original promo with sound →</b></a> · <a href="docs/promo.md">How it was made</a></sub></p>
 
@@ -15,7 +15,6 @@ Apps, math, DuckDuckGo and Grok: one keystroke away. Native Zig, no Electron, ab
 - **Does math**: `2^10 * 3` answers 3,072 (and `0xC00`). Return copies it.
 - **DuckDuckGo suggestions**: up to four, under the apps, the words you add in bold. Nothing that reads as an address (a dot, a slash, an @) is sent.
 - **Search in your browser**: Return on a search or suggestion opens DuckDuckGo in your default browser and closes the panel.
-- **Ask Grok**, a row away.
 - **⌘1–⌘9** run a row at once; ↑ ↓ and ⌃N ⌃P move.
 - Lives in the menu bar: no Dock icon, and nothing drawn while it's idle.
 

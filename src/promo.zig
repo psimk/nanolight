@@ -93,8 +93,7 @@ const script = [_]Step{
     .{ .at = 19.2, .op = say("", "") },
     .{ .at = 19.5, .op = .clear },
 } ++ typing(19.7, "best ramen", 0.065) ++ [_]Step{
-    .{ .at = 20.6, .op = down },
-    .{ .at = 20.6, .op = say("Search DuckDuckGo. Ask Grok.", "↓") },
+    .{ .at = 20.6, .op = say("Search the web with DuckDuckGo", "") },
     .{ .at = 22.4, .op = say("", "") },
     .{ .at = 22.6, .op = esc },
     .{ .at = end_at, .op = .end },
